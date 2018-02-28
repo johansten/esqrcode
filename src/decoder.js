@@ -1,8 +1,8 @@
 /*
-  Ported to JavaScript by Lazar Laszlo 2011 
-  
+  Ported to JavaScript by Lazar Laszlo 2011
+
   lazarsoft@gmail.com, www.lazarsoft.info
-  
+
 */
 
 /*
@@ -22,74 +22,72 @@
 * limitations under the License.
 */
 
+import BitMatrixParser from './bmparser.js';
+import DataBlock from './datablock.js';
+import ReedSolomonDecoder from './rsdecoder.js';
+import QRCodeDataBlockReader from './databr.js';
+import GF256 from './gf256.js';
 
-Decoder={};
+const Decoder = {};
 Decoder.rsDecoder = new ReedSolomonDecoder(GF256.QR_CODE_FIELD);
 
-Decoder.correctErrors=function( codewordBytes,  numDataCodewords)
-{
-	var numCodewords = codewordBytes.length;
+Decoder.correctErrors = function (codewordBytes, numDataCodewords) {
+	const numCodewords = codewordBytes.length;
 	// First read into an array of ints
-	var codewordsInts = new Array(numCodewords);
-	for (var i = 0; i < numCodewords; i++)
-	{
+	const codewordsInts = new Array(numCodewords);
+	for (let i = 0; i < numCodewords; i++) {
 		codewordsInts[i] = codewordBytes[i] & 0xFF;
 	}
-	var numECCodewords = codewordBytes.length - numDataCodewords;
-	try
-	{
+	const numECCodewords = codewordBytes.length - numDataCodewords;
+	try {
 		Decoder.rsDecoder.decode(codewordsInts, numECCodewords);
 		//var corrector = new ReedSolomon(codewordsInts, numECCodewords);
 		//corrector.correct();
 	}
-	catch ( rse)
-	{
+	catch (rse) {
 		throw rse;
 	}
 	// Copy back into array of bytes -- only need to worry about the bytes that were data
 	// We don't care about errors in the error-correction codewords
-	for (var i = 0; i < numDataCodewords; i++)
-	{
+	for (let i = 0; i < numDataCodewords; i++) {
 		codewordBytes[i] =  codewordsInts[i];
 	}
-}
+};
 
-Decoder.decode=function(bits)
-{
-	var parser = new BitMatrixParser(bits);
-	var version = parser.readVersion();
-	var ecLevel = parser.readFormatInformation().ErrorCorrectionLevel;
-	
+Decoder.decode = function (bits) {
+	const parser = new BitMatrixParser(bits);
+	const version = parser.readVersion();
+	const ecLevel = parser.readFormatInformation().ErrorCorrectionLevel;
+
 	// Read codewords
-	var codewords = parser.readCodewords();
+	const codewords = parser.readCodewords();
 
 	// Separate into data blocks
-	var dataBlocks = DataBlock.getDataBlocks(codewords, version, ecLevel);
-	
+	const dataBlocks = DataBlock.getDataBlocks(codewords, version, ecLevel);
+
 	// Count total number of data bytes
-	var totalBytes = 0;
-	for (var i = 0; i < dataBlocks.length; i++)
-	{
+	let totalBytes = 0;
+	for (let i = 0; i < dataBlocks.length; i++) {
 		totalBytes += dataBlocks[i].NumDataCodewords;
 	}
-	var resultBytes = new Array(totalBytes);
-	var resultOffset = 0;
-	
+
+	const resultBytes = new Array(totalBytes);
+	let resultOffset = 0;
+
 	// Error-correct and copy data blocks together into a stream of bytes
-	for (var j = 0; j < dataBlocks.length; j++)
-	{
-		var dataBlock = dataBlocks[j];
-		var codewordBytes = dataBlock.Codewords;
-		var numDataCodewords = dataBlock.NumDataCodewords;
+	for (let j = 0; j < dataBlocks.length; j++) {
+		const dataBlock = dataBlocks[j];
+		const codewordBytes = dataBlock.Codewords;
+		const numDataCodewords = dataBlock.NumDataCodewords;
 		Decoder.correctErrors(codewordBytes, numDataCodewords);
-		for (var i = 0; i < numDataCodewords; i++)
-		{
+		for (let i = 0; i < numDataCodewords; i++) {
 			resultBytes[resultOffset++] = codewordBytes[i];
 		}
 	}
-	
+
 	// Decode the contents of that stream of bytes
-	var reader = new QRCodeDataBlockReader(resultBytes, version.VersionNumber, ecLevel.Bits);
-	return reader;
+	return new QRCodeDataBlockReader(resultBytes, version.VersionNumber, ecLevel.Bits);
 	//return DecodedBitStreamParser.decode(resultBytes, version, ecLevel);
-}
+};
+
+export default Decoder;
