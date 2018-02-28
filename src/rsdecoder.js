@@ -27,7 +27,7 @@ import GF256 from './gf256.js';
 
 export default function ReedSolomonDecoder(field) {
     this.field = field;
-    this.decode = function (received,  twoS) {
+    this.decode = function (received, twoS) {
         const poly = new GF256Poly(this.field, received);
         const syndromeCoefficients = new Array(twoS);
         for (let i = 0; i <syndromeCoefficients.length; i++) {
@@ -123,8 +123,7 @@ export default function ReedSolomonDecoder(field) {
     this.findErrorLocations = function (errorLocator) {
         // This is a direct application of Chien's search
         const numErrors = errorLocator.Degree;
-        if (numErrors === 1)
-        {
+        if (numErrors === 1) {
             // shortcut
             return new Array(errorLocator.getCoefficient(1));
         }
